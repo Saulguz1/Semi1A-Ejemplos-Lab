@@ -14,6 +14,6 @@ console.log('Listening on port', port);
 
 app.get('/', function (req, res) {
 
-  res.json({ mensaje: 'Hola semi 1 - a'})
+  res.json({ mensaje: 'Hola semi 1 - A'})
 
 });
