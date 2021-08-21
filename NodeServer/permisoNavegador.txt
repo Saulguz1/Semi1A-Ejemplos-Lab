@@ -1,0 +1,3 @@
+/*Esto sirve para navegadores basados en Chronium, como edge y google chrome*/
+
+chrome://flags/#unsafely-treat-insecure-origin-as-secure
