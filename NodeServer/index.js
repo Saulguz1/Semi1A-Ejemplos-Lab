@@ -2,6 +2,7 @@ var express = require('express');
 var bodyParser = require('body-parser');
 var app = express();
 const cors = require('cors');
+const mysql = require('mysql');
 var uuid = require('uuid');
 const aws_keys = require('./creds');
 var corsOptions = { origin: true, optionsSuccessStatus: 200 };
@@ -12,11 +13,16 @@ var port = 9000;
 app.listen(port);
 console.log('Listening on port', port);
 
+const db_credentials = require('./db_creds');
+var conn = mysql.createPool(db_credentials);
 
 //instanciamos el sdk
 var AWS = require('aws-sdk');
 //instanciamos los servicios a utilizar con sus respectivos accesos.
 const s3 = new AWS.S3(aws_keys.s3);
+const ddb = new AWS.DynamoDB(aws_keys.dynamodb);
+
+
 
 
 //--------------------------------------------------Prueba---------------------------------------
@@ -109,4 +115,83 @@ app.post('/obtenerfoto', function (req, res) {
   });
 
 });
+
+
+//--------------------------------------------------BASES DE DATOS ---------------------------------------
+//subir foto y guardar en dynamo
+app.post('/saveImageInfoDDB', (req, res) => {
+  let body = req.body;
+
+  let name = body.name;
+  let base64String = body.base64String;
+  let extension = "png";
+
+  //Decodificar imagen
+  let buff = new Buffer.from(base64String, 'base64');
+  let filename = `${name}-${uuid.v4()}.${extension}`; //uuid() genera un id unico para el archivo en s3
+
+  //Parámetros para S3
+  let bucketname = 'bucketejemplo1semia';
+  let folder = 'fotos/';
+  let filepath = `${folder}${filename}`;
+
+  var uploadParamsS3 = {
+    Bucket: bucketname,
+    Key: filepath,
+    Body: buff,
+    ACL: 'public-read',
+  };
+
+    console.log("Entro")
+  s3.upload(uploadParamsS3, function sync(err, data) {
+    if (err) {
+      console.log('Error uploading file:', err);
+      res.send({ 'message': 's3 failed' })
+    } else {
+      console.log('Url del objetot:', data.Location);
+     
+      //PARTE DE INSERCION EN DYNAMO
+      ddb.putItem({
+        TableName: "ejemplosemi1",
+        Item: {
+          "id": { S: "saul" },
+          "apellido": { S: name },
+          "urlfoto": { S: data.Location }
+        }
+      }, function (err, data) {
+        if (err) {
+          console.log('Error saving data:', err);
+          res.send({ 'message': 'ddb failed' });
+        } else {
+          console.log('Save success:', data);
+          res.send({ 'message': 'ddb success' });
+        }
+      });
+
+    }
+  });
+ 
+
+})
+
+//obtener datos de la BD RDS
+app.get("/getdata", async (req, res) => {
+  conn.query(`SELECT * FROM ejemplo`, function (err, result) {
+    if (err) throw err;
+    res.send(result);
+  });
+});
+
+//insertar datos RDS
+app.post("/insertdata", async (req, res) => {
+  let body = req.body;
+  conn.query('INSERT INTO ejemplo VALUES(?,?)', [body.id, body.nombre], function (err, result) {
+    if (err) throw err;
+    res.send(result);
+  });
+});
+
+
+
+
 

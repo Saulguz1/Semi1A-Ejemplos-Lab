@@ -1,3 +1,4 @@
 NodeServer/node_modules
 iam.txt
 creds.js
+db_creds.js
