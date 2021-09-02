@@ -2,3 +2,4 @@ NodeServer/node_modules
 iam.txt
 creds.js
 db_creds.js
+NodeServerEC2-connect-MYSQLRDS-viaSSH/node_modules
