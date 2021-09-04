@@ -10,7 +10,13 @@ let aws_keys = {
         region: 'us-east-2',
         accessKeyId: "",
         secretAccessKey: ""
+    },
+    rekognition: {
+        region: '',
+        accessKeyId: "",
+        secretAccessKey: "" 
     }
+
 
 }
 module.exports = aws_keys
