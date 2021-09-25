@@ -13,6 +13,10 @@ var port = 9000;
 app.listen(port);
 console.log('Listening on port', port);
 
+//libreria cognito
+const AmazonCognitoIdentity = require('amazon-cognito-identity-js');
+
+
 const db_credentials = require('./db_creds');
 var conn = mysql.createPool(db_credentials);
 
@@ -22,6 +26,9 @@ var AWS = require('aws-sdk');
 const s3 = new AWS.S3(aws_keys.s3);
 const ddb = new AWS.DynamoDB(aws_keys.dynamodb);
 const rek = new AWS.Rekognition(aws_keys.rekognition);
+
+const translate = new AWS.Translate(aws_keys.translate);
+const cognito = new AmazonCognitoIdentity.CognitoUserPool(aws_keys.cognito);
 
 
 
@@ -306,5 +313,112 @@ app.post('/compararfotos', function (req, res) {
   });
 });
 
+
+
+
+
+//-----------------------------------------------Amazon Translate------------------------------------------
+
+app.post('/translate', (req, res) => {
+  let body = req.body
+
+  let text = body.text
+
+  let params = {
+    SourceLanguageCode: 'auto',
+    TargetLanguageCode: 'es',
+    Text: text || 'Hello there'
+  };
+  
+  translate.translateText(params, function (err, data) {
+    if (err) {
+      console.log(err, err.stack);
+      res.send({ error: err })
+    } else {
+      console.log(data);
+      res.send({ message: data })
+    }
+  });
+});
+
+//--------------------------------------------Amazon Cognito--------------------------------------------------
+
+app.post("/api/login", async (req, res) => {
+  var crypto = require('crypto');
+  var hash = crypto.createHash('sha256').update(req.body.password).digest('hex');
+  var authenticationData = {
+      Username: req.body.username,
+      Password: hash+"D**"
+  };
+  var authenticationDetails = new AmazonCognitoIdentity.AuthenticationDetails(
+      authenticationData
+  );
+  var userData = {
+      Username: req.body.username,
+      Pool: cognito,
+  };
+  var cognitoUser = new AmazonCognitoIdentity.CognitoUser(userData);
+  cognitoUser.setAuthenticationFlowType('USER_PASSWORD_AUTH');
+
+  cognitoUser.authenticateUser(authenticationDetails, {
+      onSuccess: function (result) {
+          // User authentication was successful
+          res.json(result); //
+      },
+      onFailure: function (err) {
+          // User authentication was not successful
+          res.json(err);
+      },
+      mfaRequired: function (codeDeliveryDetails) {
+          // MFA is required to complete user authentication.
+          // Get the code from user and call
+          cognitoUser.sendMFACode(verificationCode, this);
+      },
+  });
+});
+
+app.post("/api/signup", async (req, res) => {
+  var attributelist = [];
+
+  var dataname = {
+      Name: 'name',
+      Value: req.body.name,
+  };
+  var attributename = new AmazonCognitoIdentity.CognitoUserAttribute(dataname);
+
+  attributelist.push(attributename);
+
+  var dataemail = {
+      Name: 'email',
+      Value: req.body.email,
+  };
+  var attributeemail = new AmazonCognitoIdentity.CognitoUserAttribute(dataemail);
+
+  attributelist.push(attributeemail);
+
+  var datacarnet = {
+      Name: 'custom:carnet',
+      Value: req.body.carnet+"",
+  };
+  var attributecarnet = new AmazonCognitoIdentity.CognitoUserAttribute(datacarnet);
+
+  attributelist.push(attributecarnet);
+
+  var crypto = require('crypto');
+  var hash = crypto.createHash('sha256').update(req.body.password).digest('hex');
+  console.log(attributelist);
+
+  cognito.signUp(req.body.username, hash+"D**", attributelist, null, async (err, data) => {
+      
+      if (err) {
+          console.log(err);
+
+          res.json(err.message || err);
+          return;
+      }
+      console.log(data);
+      res.json(req.body.username+' registrado');
+  });
+});
 
 

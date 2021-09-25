@@ -15,7 +15,17 @@ let aws_keys = {
         region: '',
         accessKeyId: "",
         secretAccessKey: "" 
+    },
+    translate: {
+        region: '',
+        accessKeyId: "",
+        secretAccessKey: "" 
+    },
+    cognito:{
+        UserPoolId: '',
+        ClientId: ''
     }
+
 
 
 }
