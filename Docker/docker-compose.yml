@@ -1,0 +1,34 @@
+version: "3"
+
+services: 
+  frontend:
+      container_name: Apache
+      build: ./FrontEnd
+      ports: 
+          - '80:80'
+    
+  apipython: 
+    container_name: apipython 
+    build: ./Servidor
+    expose:
+      - "5000"
+    ports: 
+      - "5000:5000"
+    links: 
+      - database
+    depends_on:
+      - database
+
+  database:
+    image: mongo:latest
+    volumes:
+        - ./dbdata:/dbdata
+    expose: 
+      - "27017"
+      - "27019"
+    ports:
+        - "27017:27017"
+        - "27019:27019"
+  sauldocker:
+    image: saulguz1/semi1:repo
+    
